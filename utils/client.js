@@ -12,16 +12,10 @@ const createClient = (apiId, apiHash, session) => {
   });
 };
 
-const client1 = createClient(
-  Number(process.env.TELEGRAM_API_ID_1),
-  process.env.TELEGRAM_API_HASH_1,
-  process.env.TELEGRAM_SESSION_1,
-);
-
-const client2 = createClient(
+const client = createClient(
   Number(process.env.TELEGRAM_API_ID_2),
   process.env.TELEGRAM_API_HASH_2,
   process.env.TELEGRAM_SESSION_2,
 );
 
-module.exports = { client1, client2 };
+module.exports = { client };

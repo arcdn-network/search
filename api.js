@@ -1,12 +1,10 @@
 const express = require('express');
-const { client1, client2 } = require('./utils/client');
+const { client } = require('./utils/client');
 
 const PORT = process.env.PORT || 3000;
-const GRUPO_DEV = '-1003375877299';
 const GRUPO_PROD = '-1003422780175';
 
-const client = client2;
-const GRUPO_ID = client === client1 ? GRUPO_DEV : GRUPO_PROD;
+const GRUPO_ID = GRUPO_PROD;
 
 // --- ROUTES ---
 const welcomeRoutes = (app) => {

@@ -1,17 +1,14 @@
 require('dotenv').config({ quiet: true });
-const { client1, client2 } = require('./utils/client');
+const { client } = require('./utils/client');
 const { startServer } = require('./api');
 
 async function bootstrap() {
   try {
-    await client1.connect();
-    await client2.connect();
+    await client.connect();
 
-    const me1 = await client1.getMe();
-    const me2 = await client2.getMe();
+    const me2 = await client.getMe();
 
-    console.log(`[CLIENT 1] Conectado como: ${me1.username || me1.id}`);
-    console.log(`[CLIENT 2] Conectado como: ${me2.username || me2.id}`);
+    console.log(`[CLIENT] Conectado como: ${me2.username || me2.id}`);
 
     startServer();
   } catch (error) {
