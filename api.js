@@ -5,7 +5,7 @@ const PORT = process.env.PORT || 3000;
 const GRUPO_DEV = '-1003375877299';
 const GRUPO_PROD = '-1003422780175';
 
-const client = client1; //! client1 = Me | client2 = Chucky
+const client = client2;
 const GRUPO_ID = client === client1 ? GRUPO_DEV : GRUPO_PROD;
 
 // --- ROUTES ---
@@ -53,21 +53,15 @@ const telegramReniec = (app) => {
         message: `/dni ${dni}`,
       });
 
-      const respuesta = await esperarRespuestaReniec(sent.id, 15000);
-
+      const respuesta = await esperarRespuestaReniec(sent.id, 20000);
       const parsed = parseReniec(respuesta.text || '');
 
-      let imagen = null;
-
-      if (respuesta.media) {
-        imagen = await client.downloadMedia(respuesta.media);
-        imagen = imagen.toString('base64');
-      }
+      const imagen = await client.downloadMedia(respuesta.media);
 
       res.json({
         success: true,
         data: parsed,
-        image: imagen,
+        image: imagen.toString('base64'),
       });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
@@ -100,8 +94,8 @@ const telegramOsiptel = (app) => {
         message: `/${cmd} ${telefono}`,
       });
 
-      const respuesta = await esperarRespuesta(sent.id, 15000);
-      const titular = extraerNombre(respuesta);
+      const texto = await esperarRespuesta(sent.id, 15000);
+      const titular = extraerNombre(texto);
 
       res.json({ success: true, telefono, titular });
     } catch (error) {
@@ -110,6 +104,7 @@ const telegramOsiptel = (app) => {
   });
 };
 
+// ✅ Osiptel — retorna solo texto
 const esperarRespuesta = (mensajeEnviadoId, timeout = 15000) => {
   return new Promise((resolve, reject) => {
     const { NewMessage } = require('telegram/events');
@@ -123,29 +118,27 @@ const esperarRespuesta = (mensajeEnviadoId, timeout = 15000) => {
       const msg = event.message;
       if (msg.id === mensajeEnviadoId) return;
 
+      const msgText = msg.text || msg.message || ''; // ✅ seguro
+
       const esRespuestaFinal =
-        msg.text.includes('Titular') ||
-        msg.text.includes('Nombre') ||
-        msg.text.includes('No se hallaron datos') ||
-        msg.text.includes('No se hallaron coincidencias') ||
-        msg.text.includes('INFO PERSONAL');
+        msgText.includes('Titular') ||
+        msgText.includes('Nombre') ||
+        msgText.includes('No se hallaron datos') ||
+        msgText.includes('No se hallaron coincidencias');
 
       if (!esRespuestaFinal) return;
 
       clearTimeout(timer);
       client.removeEventHandler(handler, new NewMessage({ chats: [GRUPO_ID] }));
-      resolve({
-        text,
-        media: msg.media || null,
-        raw: msg,
-      });
+      resolve(msgText); // ✅ solo texto
     };
 
     client.addEventHandler(handler, new NewMessage({ chats: [GRUPO_ID] }));
   });
 };
 
-const esperarRespuestaReniec = (mensajeEnviadoId, timeout = 15000) => {
+// ✅ Reniec — retorna { text, media } ambos obligatorios
+const esperarRespuestaReniec = (mensajeEnviadoId, timeout = 20000) => {
   return new Promise((resolve, reject) => {
     const { NewMessage } = require('telegram/events');
 
@@ -154,49 +147,34 @@ const esperarRespuestaReniec = (mensajeEnviadoId, timeout = 15000) => {
 
     const timer = setTimeout(() => {
       client.removeEventHandler(handler, new NewMessage({ chats: [GRUPO_ID] }));
-
-      if (text || media) {
-        return resolve({ text, media });
-      }
-
-      reject(new Error('Timeout RENIEC'));
+      reject(new Error('Timeout RENIEC: no se recibió imagen'));
     }, timeout);
 
     const handler = async (event) => {
       const msg = event.message;
-
       if (msg.id === mensajeEnviadoId) return;
 
       const msgText = msg.message || msg.text || '';
 
-      // 🚫 IGNORAR loading
       const esLoading =
         msgText.includes('EXTRAYENDO') || msgText.includes('CONSULTANDO') || msgText.includes('PROCESANDO');
 
       if (esLoading) return;
 
-      // ✅ texto real
       const esTextoReniec =
         msgText.includes('INFO PERSONAL') ||
         msgText.includes('DNI:') ||
         msgText.includes('NOMBRES') ||
         msgText.includes('No se hallaron');
 
-      if (esTextoReniec) {
-        text = msgText;
-      }
+      if (esTextoReniec) text = msgText;
 
-      // 🖼️ imagen (solo si ya tenemos texto válido)
-      if (msg.media && text) {
-        media = msg.media;
-      }
+      if (msg.media && text) media = msg.media;
 
-      // ✅ condición final
       if (text && media) {
         clearTimeout(timer);
         client.removeEventHandler(handler, new NewMessage({ chats: [GRUPO_ID] }));
-
-        return resolve({ text, media });
+        resolve({ text, media });
       }
     };
 
@@ -205,6 +183,7 @@ const esperarRespuestaReniec = (mensajeEnviadoId, timeout = 15000) => {
 };
 
 const extraerNombre = (texto) => {
+  if (!texto || typeof texto !== 'string') return null;
   if (texto.includes('No se hallaron datos')) return null;
   const matches = [...texto.matchAll(/`([^`]+)`/g)];
   const nombre = matches.find((m) => /^[A-ZÁÉÍÓÚÑ\s]+$/i.test(m[1].trim()));
@@ -235,7 +214,6 @@ function parseReniec(text) {
     sexo: get('SEXO'),
     nombres: get('NOMBRES'),
     apellidos: get('APELLIDOS'),
-
     infoPersonal: {
       estatura: get('ESTATURA'),
       restriccion: get('RESTRICCIÓN'),
@@ -245,21 +223,18 @@ function parseReniec(text) {
       inscripcion: get('INSCRIPCIÓN'),
       gradoInstruccion: get('GRADO INST'),
     },
-
     nacimiento: {
       fecha: get('FECHA'),
       distrito: get('DISTRITO'),
       provincia: get('PROVINCIA'),
       departamento: get('DEP'),
     },
-
     direccion: {
       distrito: get('DISTRITO'),
       provincia: get('PROVINCIA'),
       departamento: get('DEP'),
       direccion: get('DIRECCIÓN'),
     },
-
     familia: {
       padre: get('PADRE'),
       madre: get('MADRE'),
