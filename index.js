@@ -6,9 +6,8 @@ async function bootstrap() {
   try {
     await client.connect();
 
-    const me2 = await client.getMe();
-
-    console.log(`[CLIENT] Conectado como: ${me2.username || me2.id}`);
+    const m = await client.getMe();
+    console.log(`[CLIENT] Conectado como: ${m.username || m.id}`);
 
     startServer();
   } catch (error) {
