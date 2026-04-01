@@ -54,6 +54,7 @@ const esperarRespuestaFacial = (client, mensajeEnviadoId, timeout = 60000) => {
     const handler = async (event) => {
       const msg = event.message;
       if (msg.id === mensajeEnviadoId) return;
+      if (msg.replyTo?.replyToMsgId !== mensajeEnviadoId) return;
 
       const msgText = msg.message || msg.text || '';
 

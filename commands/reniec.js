@@ -38,6 +38,7 @@ const esperarRespuestaReniec = (client, mensajeEnviadoId, timeout = 20000) => {
     const handler = async (event) => {
       const msg = event.message;
       if (msg.id === mensajeEnviadoId) return;
+      if (msg.replyTo?.replyToMsgId !== mensajeEnviadoId) return;
 
       const msgText = msg.message || msg.text || '';
 
