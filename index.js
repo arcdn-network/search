@@ -18,7 +18,7 @@ async function bootstrap() {
 
     loadCommands(app, client);
 
-    app.listen(PORT || 3000, () => {
+    app.listen(PORT, () => {
       console.log(`[SERVER] Escuchando en el puerto: ${PORT} | ${IS_DEV ? 'DEV' : 'PROD'}`);
     });
   } catch (error) {
