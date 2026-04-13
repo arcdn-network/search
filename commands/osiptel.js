@@ -68,8 +68,9 @@ const esperarRespuesta = (client, mensajeEnviadoId, timeout = 20000, ventana = 3
 
       // 🔥 NUEVO: incluye "Sin Resultados"
       const esRespuestaFinal =
-        msgText.includes('Titular') ||
-        msgText.includes('TELEFONÍA') ||
+        msgText.includes('OSIPTEL ONLINE') ||
+        msgText.includes('CLARO ONLINE') ||
+        msgText.includes('TITULAR') ||
         msgText.includes('Sin Resultados') ||
         msgText.includes('No se hallaron');
 
@@ -95,14 +96,13 @@ const parsearRespuesta = (texto) => {
   if (texto.includes('Sin Resultados')) return null;
 
   const limpio = texto.replace(/\*\*|`/g, '');
-  const match = limpio.match(/TITULAR\s*➣\s*([^\n•]+)/);
+  const linea = limpio.split('\n').find((l) => l.toUpperCase().includes('TITULAR'));
 
-  if (match) {
-    const titular = match[1].trim();
-    return titular !== '—' ? toTitleCase(titular) : null;
-  }
+  if (!linea) return null;
 
-  return null;
+  const titular = linea.split(/➣|➾|:/)[1]?.trim();
+
+  return titular ? toTitleCase(titular) : null;
 };
 
 module.exports = { telegramOsiptel };
