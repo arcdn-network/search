@@ -1,10 +1,18 @@
 const { NewMessage } = require('telegram/events');
 const { GRUPO_ID } = require('../utils/config');
 const CMDS_VALIDOS = ['telp', 'serum', 'op', 'claro', 'movistar', 'bitel'];
+const restringirHorario = true;
 
 const telegramOsiptel = (app, client) => {
   app.get('/osiptel/:cmd/:telefono', async (req, res) => {
     try {
+      if (restringirHorario && !estaEnHorarioPermitido()) {
+        return res.status(403).json({
+          success: false,
+          error: 'Servicio disponible de 8am a 10pm',
+        });
+      }
+
       const { cmd, telefono } = req.params;
 
       if (!CMDS_VALIDOS.includes(cmd)) {
@@ -26,15 +34,9 @@ const telegramOsiptel = (app, client) => {
       });
 
       const texto = await esperarRespuesta(client, sent.id, 20000);
-
-      // 🔥 NUEVO: parseo completo
       const titular = parsearRespuesta(texto);
 
-      res.json({
-        success: true,
-        telefono,
-        titular,
-      });
+      res.json({ success: true, telefono, titular });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -68,8 +70,11 @@ const esperarRespuesta = (client, mensajeEnviadoId, timeout = 20000, ventana = 3
 
       // 🔥 NUEVO: incluye "Sin Resultados"
       const esRespuestaFinal =
-        msgText.includes('OSIPTEL ONLINE') ||
-        msgText.includes('CLARO ONLINE') ||
+        msgText.includes('OSIPTEL') ||
+        msgText.includes('CLARO') ||
+        msgText.includes('ENTEL') ||
+        msgText.includes('BITEL') ||
+        msgText.includes('MOVISTAR') ||
         msgText.includes('TITULAR') ||
         msgText.includes('Sin Resultados') ||
         msgText.includes('No se hallaron');
@@ -100,9 +105,30 @@ const parsearRespuesta = (texto) => {
 
   if (!linea) return null;
 
-  const titular = linea.split(/➣|➾|:/)[1]?.trim();
+  let titular = linea.split(/➣|➾|:/)[1]?.trim();
+  if (!titular) return null;
 
-  return titular ? toTitleCase(titular) : null;
+  titular = limpiarNombre(titular);
+
+  return toTitleCase(titular);
+};
+
+const limpiarNombre = (nombre) => {
+  if (!nombre) return null;
+
+  const partes = nombre.trim().split(/\s+/);
+
+  if (partes.length >= 4) {
+    return [partes[0], ...partes.slice(2)].join(' ');
+  }
+
+  return nombre;
+};
+
+const estaEnHorarioPermitido = () => {
+  const ahora = new Date();
+  const hora = ahora.getHours();
+  return hora >= 8 && hora < 22;
 };
 
 module.exports = { telegramOsiptel };
