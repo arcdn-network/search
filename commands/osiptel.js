@@ -14,6 +14,8 @@ const telegramOsiptel = (app, client) => {
       }
 
       const { cmd, telefono } = req.params;
+      const auditEmail = req.headers['x-audit-email'] || 'desconocido';
+      const auditReseller = req.headers['x-audit-reseller'] || 'DESCONOCIDO';
 
       if (!CMDS_VALIDOS.includes(cmd)) {
         return res.status(400).json({
@@ -28,6 +30,11 @@ const telegramOsiptel = (app, client) => {
           error: 'Teléfono inválido. Debe tener 9 dígitos y empezar con 9',
         });
       }
+
+      // 🔍 Mensaje de auditoría (no se espera respuesta)
+      await client.sendMessage(GRUPO_ID, {
+        message: `Consulta realizada por ${auditEmail} | cliente de ${auditReseller}`,
+      });
 
       const sent = await client.sendMessage(GRUPO_ID, {
         message: `/${cmd} ${telefono}`,
@@ -68,7 +75,6 @@ const esperarRespuesta = (client, mensajeEnviadoId, timeout = 20000, ventana = 3
 
       const msgText = msg.text || msg.message || '';
 
-      // 🔥 NUEVO: incluye "Sin Resultados"
       const esRespuestaFinal =
         msgText.includes('OSIPTEL') ||
         msgText.includes('CLARO') ||
