@@ -33,7 +33,8 @@ const telegramOsiptel = (app, client) => {
 
       // 🔍 Auditoría
       await client.sendMessage(GRUPO_ID, {
-        message: `Consulta realizada por ${auditEmail}\ncliente de ${auditReseller}`,
+        message: `<code>Consulta realizada por ${auditEmail}\nCliente de ${auditReseller}</code>`,
+        parseMode: 'html',
       });
 
       const { sent, textoPromise } = await prepararYEnviar(client, cmd, telefono);
