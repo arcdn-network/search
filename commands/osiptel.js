@@ -31,16 +31,14 @@ const telegramOsiptel = (app, client) => {
         });
       }
 
-      // 🔍 Mensaje de auditoría (no se espera respuesta)
+      // 🔍 Auditoría
       await client.sendMessage(GRUPO_ID, {
         message: `Consulta realizada por ${auditEmail} | cliente de ${auditReseller}`,
       });
 
-      const sent = await client.sendMessage(GRUPO_ID, {
-        message: `/${cmd} ${telefono}`,
-      });
+      const { sent, textoPromise } = await prepararYEnviar(client, cmd, telefono);
 
-      const texto = await esperarRespuesta(client, sent.id, 20000);
+      const texto = await textoPromise;
       const titular = parsearRespuesta(texto);
 
       res.json({ success: true, telefono, titular });
@@ -50,10 +48,33 @@ const telegramOsiptel = (app, client) => {
   });
 };
 
-const esperarRespuesta = (client, mensajeEnviadoId, timeout = 20000, ventana = 3000) => {
+const prepararYEnviar = async (client, cmd, telefono) => {
+  let resolveId;
+
+  const idPromise = new Promise((resolve) => {
+    resolveId = resolve;
+  });
+
+  const textoPromise = esperarRespuesta(client, idPromise);
+
+  const sent = await client.sendMessage(GRUPO_ID, {
+    message: `/${cmd} ${telefono}`,
+  });
+
+  resolveId(sent.id);
+
+  return { sent, textoPromise };
+};
+
+const esperarRespuesta = (client, idPromise, timeout = 25000, ventana = 3000) => {
   return new Promise((resolve, reject) => {
     const respuestas = [];
     let ventanaTimer = null;
+    let mensajeEnviadoId = null;
+
+    idPromise.then((id) => {
+      mensajeEnviadoId = id;
+    });
 
     const timer = setTimeout(() => {
       clearTimeout(ventanaTimer);
@@ -70,6 +91,8 @@ const esperarRespuesta = (client, mensajeEnviadoId, timeout = 20000, ventana = 3
 
     const handler = async (event) => {
       const msg = event.message;
+
+      if (!mensajeEnviadoId) return;
       if (msg.id === mensajeEnviadoId) return;
       if (msg.replyTo?.replyToMsgId !== mensajeEnviadoId) return;
 
@@ -87,10 +110,7 @@ const esperarRespuesta = (client, mensajeEnviadoId, timeout = 20000, ventana = 3
 
       if (!esRespuestaFinal) return;
 
-      respuestas.push({
-        texto: msgText,
-        fecha: new Date(),
-      });
+      respuestas.push({ texto: msgText, fecha: new Date() });
 
       clearTimeout(ventanaTimer);
       ventanaTimer = setTimeout(resolverConMejor, ventana);
@@ -123,11 +143,7 @@ const limpiarNombre = (nombre) => {
   if (!nombre) return null;
 
   const partes = nombre.trim().split(/\s+/);
-
-  if (partes.length >= 4) {
-    return [partes[0], ...partes.slice(2)].join(' ');
-  }
-
+  if (partes.length >= 4) return [partes[0], ...partes.slice(2)].join(' ');
   return nombre;
 };
 
