@@ -17,6 +17,10 @@ const telegramOsiptel = (app, client) => {
       const auditEmail = req.headers['x-audit-email'] || 'desconocido';
       const auditReseller = req.headers['x-audit-reseller'] || 'DESCONOCIDO';
 
+      if (!auditEmail || !auditReseller) {
+        return res.status(400).json({ success: false, error: 'Debe enviar email y reseller.' });
+      }
+
       if (!CMDS_VALIDOS.includes(cmd)) {
         return res.status(400).json({
           success: false,
@@ -33,7 +37,7 @@ const telegramOsiptel = (app, client) => {
 
       // 🔍 Auditoría
       await client.sendMessage(GRUPO_ID, {
-        message: `<code>Consulta realizada por ${auditEmail}\nCliente de ${auditReseller}</code>`,
+        message: `Consulta realizada por <code>${auditEmail}</code>\nCliente de ${auditReseller}`,
         parseMode: 'html',
       });
 
