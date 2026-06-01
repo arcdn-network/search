@@ -130,6 +130,8 @@ const toTitleCase = (str) => str.toLowerCase().replace(/\b\w/g, (c) => c.toUpper
 const parsearRespuesta = (texto) => {
   if (!texto || typeof texto !== 'string') return null;
   if (texto.includes('Sin Resultados')) return null;
+  if (texto.includes('[✖️] No se encontro informacion para los datos ingresados.')) return null;
+  if (texto.includes('No se encontro informacion')) return null;
 
   const limpio = texto.replace(/\*\*|`/g, '');
   const linea = limpio.split('\n').find((l) => l.toUpperCase().includes('TITULAR'));
@@ -153,9 +155,8 @@ const limpiarNombre = (nombre) => {
 };
 
 const estaEnHorarioPermitido = () => {
-  const ahora = new Date();
-  const hora = ahora.getHours();
-  return hora >= 8 && hora < 22;
+  const hora = new Date().getHours();
+  return hora >= 8;
 };
 
 module.exports = { telegramOsiptel };
